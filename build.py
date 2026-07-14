@@ -470,6 +470,12 @@ tailwind.config = {{
     white-space:nowrap; }}
   .task .pv {{ opacity:.65; font-size:13px; white-space:nowrap; }}
   .task:hover .pv {{ opacity:.85; }}
+  .task.done {{ background:#e7f6ec; border-color:#b6e3c4; color:#1c7a43; }}
+  .task.done::after {{ content:"✓"; font-size:14px; font-weight:800; color:#1c9e52;
+    margin-left:2px; }}
+  .task.done:hover {{ background:#1c9e52; color:#fff; border-color:#1c9e52;
+    box-shadow:0 8px 18px rgba(28,158,82,.28); }}
+  .task.done:hover::after {{ color:#fff; }}
   .sk.s-tuvung {{ background:var(--orange); }}
   .sk.s-nguphap {{ background:var(--red); }}
   .sk.s-dochieu {{ background:var(--blue2); }}
@@ -592,6 +598,19 @@ const ytThumb = u => {{
 }};
 const imgSized = u => (u.startsWith('http') && !u.includes('=')) ? u + '=w400' : u;
 
+const DONE_KEY = 'amslink_done_tasks';
+let doneTasks;
+try {{ doneTasks = new Set(JSON.parse(localStorage.getItem(DONE_KEY) || '[]')); }}
+catch (e) {{ doneTasks = new Set(); }}
+const saveDone = () => {{
+  try {{ localStorage.setItem(DONE_KEY, JSON.stringify([...doneTasks])); }} catch (e) {{}}
+}};
+const markDone = url => {{
+  if (doneTasks.has(url)) return;
+  doneTasks.add(url);
+  saveDone();
+}};
+
 function render(id) {{
   const c = DB[id];
   if (!c) return;
@@ -657,7 +676,8 @@ function render(id) {{
       if (ts.length) {{
         inner += '<div class="tasks">';
         ts.forEach(([label, skill, prov, url, topic]) => {{
-          inner += `<a class="task" href="${{esc(url)}}" target="_blank" rel="noopener"
+          inner += `<a class="task${{doneTasks.has(url) ? ' done' : ''}}" href="${{esc(url)}}"
+            target="_blank" rel="noopener" data-url="${{esc(url)}}"
             title="${{esc(label || skill)}}">
             <span class="sk ${{skillClass(skill)}}">${{esc(skill)}}</span>` +
             (topic ? `<span class="tp">${{esc(topic)}}</span>` : '') +
@@ -688,6 +708,13 @@ function render(id) {{
   detail.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
 }}
+
+panel.addEventListener('click', e => {{
+  const a = e.target.closest('a.task');
+  if (!a) return;
+  const url = a.getAttribute('data-url');
+  if (url) {{ markDone(url); a.classList.add('done'); }}
+}});
 
 function setSkill(s) {{ curSkill = s; render(curId); }}
 
